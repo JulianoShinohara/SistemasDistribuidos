@@ -26,23 +26,26 @@ serverSocket.sendall(str.encode('teste teste'))
 data = serverSocket.recv(1024)
 print('Mensagem: ',data.decode())
 
-var = ['CONNECT', 'PWD', 'CHDIR', 'GETFILES', 'GETDIRS', 'EXIT']
+connect = False
+while True:
+    var = input()
+    match var:
+        case 'CONNECT':
+            print('')
 
-match var:
-    case ['CONNECT']:
-        print('')
+        case 'PWD':
+            print('')
 
-    case ['PWD']:
-        print('')
+        case 'CHDIR':
+            print('')
 
-    case ['CHDIR']:
-        print('')
+        case 'GETFILES':
+            print('')
 
-    case ['GETFILES']:
-        print('')
+        case 'GETDIRS':
+            print('') 
 
-    case ['GETDIRS']:
-        print('')
-
-    case ['EXIT']:
-        print('')
+        case 'EXIT':
+            data = serverSocket.recv(1024)
+            print('Mensagem: ',data.decode())
+            serverSocket.close()
