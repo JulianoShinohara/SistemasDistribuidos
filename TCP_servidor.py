@@ -91,7 +91,7 @@ def connectionClient(ip, port, connection):
                     # Nome dos arquivos
                     listFiles = list[str] = []
                     # Diretório utilizado
-                    directory = str(os.getcwd)
+                    directory = str(os.getcwd())
                     # Dados armazenados no diretório
                     files = os.listdir(directory)
 
@@ -102,9 +102,38 @@ def connectionClient(ip, port, connection):
                     
                     if quantityFiles > 0:
                         # Envia o número de arquivos para o cliente
-                        connection.send(str(numberFiles).encode('utf-8'))
+                        connection.send(str(quantityFiles).encode('utf-8'))
                         # Envia a lista com o nome dos arquivos para o cliente
-                        connection.send(str(listFileName).encode('utf-8'))
+                        connection.send(str(listFiles).encode('utf-8'))
+                    else:
+                        connection.send(('0').encode())
+                    nameLog.info('Protocol: %s', ' successfully GETFILES', extra=dados)
+                else:
+                    nameLog.info('Protocol: %s', 'need CONNECTION', extra = dados)            
+                    connection.send(('ERROR').encode())
+            
+            case 'GETDIRS':
+                if authenticator == True:
+                    nameLog.info('Protocol: %s', 'received GET DIRS request', extra = dados)            
+                    # Quantidade de arquivos
+                    quantityFiles = 0
+                    # Nome dos arquivos
+                    listDirFiles = list[str] = []
+                    # Diretório utilizado
+                    directory = str(os.getcwd)
+                    # Dados armazenados no diretório
+                    files = os.listdir(directory)
+
+                    for name in files:
+                        if os.path.isfile(str(directory + '\\' + name)):
+                            quantityFiles = quantityFiles + 1
+                            listDirFiles.append(str(name))
+
+                    if quantityFiles > 0:
+                        # Envia o número de arquivos para o cliente
+                        connection.send(str(quantityFiles).encode('utf-8'))
+                        # Envia a lista com o nome dos arquivos para o cliente
+                        connection.send(str(listFiles).encode('utf-8'))
                     else:
                         connection.send(('0').encode())
                     nameLog.info('Protocol: %s', ' successfully GETFILES', extra=dados)
