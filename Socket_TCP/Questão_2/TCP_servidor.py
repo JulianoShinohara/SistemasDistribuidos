@@ -1,157 +1,186 @@
-############################################################################
-# Questão 1 - TCP Servidor                                                 #
-# Descrição: Envia mensagens para o cliente utilizando uma das opções:     #
-#        - CONNECT user, password: Tenta estabelecer a conexão com cliente #
-#        - EXIT: Finaliza a conexão com o cliente                          #
-#        - PWD: Exibe diretório atual                                      #
-#        - GETFILES: Exibe todos os arquivos do diretório atual            #
-#        - GETDIRS: Exibe todos os diretórios atuais                       #
-#        - CHDIR *path*: Altera o diretório para o *path* especifica       #
-#                                                                          #
-# Autores: Gabriela Marangoni Radigonda e Juliano Kendyi Shinohara         #
-# Data de criação: 11/09/2022                                              #
-# Datas de atualizações: 13/09/2022                                        #
-#                        15/09/2022                                        #
-############################################################################
+###############################################################################
+# Questão 2 - TCP Servidor                                                    #
+# Descrição:  Faça uma aplicação com um servidor que gerencia um conjunto de  #
+# arquivos remotos entre múltiplos usuários. O servidor deve responder aos    #
+# seguintes comandos:                                                         #
+#              -> ADDFILE (1): adiciona um arquivo novo.                      #
+#              -> DELETE (2): remove um arquivo existente.                    #
+#              -> GETFILESLIST (3): retorna uma lista com o nome dos arquivos #
+#              -> GETFILE (4): faz download de um arquivo.                    #
+# Autores: Gabriela Marangoni Radigonda e Juliano Kendyi Shinohara            #
+# Data de criação: 11/09/2022                                                 #
+# Datas de atualizações: 18/09/2022                                           #
+#                        20/09/2022                                           #
+###############################################################################
 
-from genericpath import isfile
 import logging
 import os
 import socket
+import threading
 
-HOST = "localhost"
+HOST = ""
 PORT = 6000
 addr = (HOST, PORT)
-user = 'Gaby'
-password = 'teste1teste2teste3'
 
-#Cria socket e define a instancia
-serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+# Cria socket e define a instancia
+serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 serverSocket.bind(addr)
-#Define o formato do log
-formatLog = '%(asctime)-1s %(clientip)s %(user)s %(message)s'
-logging.basicConfig(format = formatLog, level = 20)
+
+# Define o formato do log
+formatLog = '%(asctime)-1s %(userIP)s %(userPort)s %(message)s'
+logging.basicConfig(format=formatLog, level=20)
 nameLog = logging.getLogger('TCP_Server')
 
+
 def connectionClient(ip, port, connection):
-    # variável para verificar se user está autenticado.
-    authenticator = False
     dados = {'userIP': ip, 'userPort': port}
+
     while True:
+        responseHeader = bytearray(3)
+        responseHeader[0] = 2
 
-        # Cria variavel que recebe e descriptografa a mensagem.
-        messageReceive = ''
-        messageReceive = connection.recv(1024).decode()
+        # Recebe e separa os campos do cabeçalho
+        messageReceived = bytearray(connection.recv(1024))
+        messageType = int(messageReceived[0])
+        commandIdent = int(messageReceived[1])
+        fileNameSize = int(messageReceived[2])
+        fileName = messageReceived[3:].decode('utf-8')
 
-        if len(messageReceive.aplit()) > 2:
-            connect = messageReceive
-            messageReceive = (messageReceive.split())[0]
-        match messageReceive:
-            case 'CONNECT':
-                userClient = (connect.split())[1]
-                userPassword = (connect.split())[2]
-                nameLog.info('Protocol: %s', 'received CONNECT request', extra = dados)            
-                # Verifica se usuário é valido
-                if userClient == user:
-                    # Verifica se a senha está correta
-                    if userPassword == password:
-                        nameLog.info('Protocol: %s', 'successfully connected', extra = dados)
-                        connection.send(('SUCCESS').encode())
-                        authenticator = True
+        # ADD FILE
+        match commandIdent:
+            case 1:
+                nameLog.info('Protocol: %s',
+                             'Received ADDFILE request', extra=dados)
+                archiveSize = int.from_bytes(
+                    connection.recv(4), byteorder='big')
+                archive = b''
+                nameLog.info('Protocol: %s', ' Downloading...', extra=dados)
+                archive = connection.recv(archiveSize)
+                nameLog.info('Protocol: %s', ' Download finished', extra=dados)
+
+                with open('./archiveServer/' + fileName, 'w+b') as archiveFile:
+                    archiveFile.write(archive)
+
+                archive = os.listdir(path='./archiveServer/')
+                if fileName in archive:
+                    responseHeader[2] = 1
+                    nameLog.info('Protocol: %s',
+                                 'Successfully ADDFILE', extra=dados)
+                else:
+                    responseHeader[2] = 2
+                    nameLog.info('Protocol: %s',
+                                 'Unsuccessfully ADDFILE', extra=dados)
+
+                responseHeader[1] = 1
+                connection.send(responseHeader)
+                nameLog.info('Protocol: %s',
+                             'Response ADDFILE sent', extra=dados)
+
+            # DELETE archive
+            case 2:
+                nameLog.info('Protocol: %s',
+                             'Received DELETE request', extra=dados)
+                if os.path.isfile('./archiveServer/' + fileName):
+                    os.remove('./archiveServer/' + fileName)
+
+                    if os.path.isfile('./archiveServer/' + fileName):
+                        responseHeader[2] = 2
+                        nameLog.info('Protocol: %s',
+                                     'Unsuccessfully DELETE ', extra=dados)
                     else:
-                        nameLog.info('Protocol: %s', 'invalid connection', extra = dados)            
-                        connection.send(('ERROR').encode())
+                        responseHeader[2] = 1
+                        nameLog.info('Protocol: %s',
+                                     'Successfully DELETE ', extra=dados)
+
+                connection.send(responseHeader)
+                nameLog.info('Protocol: %s',
+                             'Response DELETE sent ', extra=dados)
+
+            # GETFILESLIST
+            case 3:
+
+                nameLog.info('Protocol: %s',
+                             'Received GETFILESLIST request', extra=dados)
+                quantityFiles = 0
+                files: list[str] = []
+                directory = os.listdir('./archiveServer/')
+                responseHeader[1] = 3
+                nameSizeResponseHeader = 0
+
+                for nameFile in directory:
+                    if os.path.isfile(str('./archiveServer/' + nameFile)):
+                        quantityFiles = quantityFiles + 1
+                        files.append(str(nameFile))
+
+                if quantityFiles > 0:
+                    responseHeader[2] = 1
+                    connection.send(responseHeader)
+                    connection.send(quantityFiles.to_bytes(2, byteorder="big"))
+                    for nameFile in files:
+                        nameSizeResponseHeader = len(nameFile)
+                        connection.send(
+                            nameSizeResponseHeader.to_bytes(1, byteorder="big"))
+                        connection.send(nameFile.encode())
+                        nameLog.info('Protocol: %s',
+                                     'Response GETFILELIST sent', extra=dados)
+
                 else:
-                    nameLog.info('Protocol: %s', 'invalid connection', extra = dados)            
-                    connection.send(('ERROR').encode())
-            
-            case 'EXIT':
-                if authenticator == True:
-                    nameLog.info('Protocol: %s', 'received EXIT request', extra = dados)            
-                    connection.send(('Finish connection').encode())
-                    connection.close()
-                    authenticator = False
-                    break
+                    nameLog.info('Protocol: %s',
+                                 'Unsucessfully GETFILELIST', extra=dados)
+                    responseHeader[2] = 2
+                    connection.send(responseHeader)
+                    nameLog.info('Protocol: %s',
+                                 'Response GETFILELIST sent', extra=dados)
 
-            case 'PWD':
-                if authenticator == True:
-                    nameLog.info('Protocol: %s', 'received PWD request', extra = dados)            
-                    directory: os.PathLike = os.getcdw()
-                    connection.send((directory).encode())
+            # GETLIST
+            case 4:
+                nameLog.info('Protocol: %s',
+                             'Received GETLIST request', extra=dados)
+                responseHeader[1] = 4
+                archive = os.listdir('./archiveServer/')
+
+                if len(fileName) <= 255:
+                    responseHeader[2] = 1
+                    connection.send(responseHeader)
+                    nameLog.info('Protocol: %s',
+                                 'Response GETLIST sent', extra=dados)
+                    fileSize = (os.stat('./archiveServer/' +
+                                fileName).st_size).to_bytes(4, byteorder="big")
+                    connection.send(fileSize)
+                    fileOpen = open('./archiveServer/' + fileName, 'rb')
+                    file = fileOpen.read()
+                    nameLog.info('Protocol: %s',
+                                 'Starting upload', extra=dados)
+                    connection.send(file)
+                    nameLog.info('Protocol: %s',
+                                 'Upload finished', extra=dados)
+                    fileOpen.close()
+
                 else:
-                    nameLog.info('Protocol: %s', 'need CONNECTION', extra = dados)            
-                    connection.send(('ERROR').encode())
+                    nameLog.info('Protocol: %s',
+                                 'Unsuccessfully GETFILE', extra=dados)
+                    responseHeader[2] = 2
+                    connection.send(responseHeader)
+                    nameLog.info('Protocol: %s',
+                                 'Response GETFILE sent', extra=dados)
 
 
-            case 'GETFILES':
-                if authenticator == True:
-                    nameLog.info('Protocol: %s', 'received GET FILES request', extra = dados)            
-                    # Quantidade de arquivos
-                    quantityFiles = 0
-                    # Nome dos arquivos
-                    listFiles = list[str] = []
-                    # Diretório utilizado
-                    directory = str(os.getcwd())
-                    # Dados armazenados no diretório
-                    files = os.listdir(directory)
+def main():
+    vetorThreads = []
 
-                    for name in files:
-                        if os.path.isfile(str(directory + '\\' + name)):
-                            quantityFiles = quantityFiles + 1
-                            listFiles.append(str(name))
-                    
-                    if quantityFiles > 0:
-                        # Envia o número de arquivos para o cliente
-                        connection.send(str(quantityFiles).encode('utf-8'))
-                        # Envia a lista com o nome dos arquivos para o cliente
-                        connection.send(str(listFiles).encode('utf-8'))
-                    else:
-                        connection.send(('0').encode())
-                    nameLog.info('Protocol: %s', ' successfully GETFILES', extra=dados)
-                else:
-                    nameLog.info('Protocol: %s', 'need CONNECTION', extra = dados)            
-                    connection.send(('ERROR').encode())
-            
-            case 'GETDIRS':
-                if authenticator == True:
-                    nameLog.info('Protocol: %s', 'received GET DIRS request', extra = dados)            
-                    # Quantidade de arquivos
-                    quantityFiles = 0
-                    # Nome dos arquivos
-                    listDirFiles = list[str] = []
-                    # Diretório utilizado
-                    directory = str(os.getcwd)
-                    # Dados armazenados no diretório
-                    files = os.listdir(directory)
+    while True:
+        serverSocket.listen(3)
+        (connection, (ip, port)) = serverSocket.accept()
+        dados = {'userIP': ip, 'userPort': port}
+        nameLog.info('Protocol info: %s',
+                     'connection established', extra=dados)
 
-                    for name in files:
-                        if os.path.isfile(str(directory + '\\' + name)):
-                            quantityFiles = quantityFiles + 1
-                            listDirFiles.append(str(name))
+        thread = threading.Thread(
+            target=connectionClient, args=(ip, port, connection, ))
+        thread.start()
+        vetorThreads.append(thread)
 
-                    if quantityFiles > 0:
-                        # Envia o número de arquivos para o cliente
-                        connection.send(str(quantityFiles).encode('utf-8'))
-                        # Envia a lista com o nome dos arquivos para o cliente
-                        connection.send(str(listFiles).encode('utf-8'))
-                    else:
-                        connection.send(('0').encode())
-                    nameLog.info('Protocol: %s', ' successfully GETFILES', extra=dados)
-                else:
-                    nameLog.info('Protocol: %s', 'need CONNECTION', extra = dados)            
-                    connection.send(('ERROR').encode())
 
-serverSocket.listen()
-print('Waiting Connection')
-connection, address = serverSocket.accept()
-
-print("Connect in address", address)
-
-while True:
-    data = connection.recv(1024)
-    if not data:
-        print("Close connection")
-        connection.close()
-        break
-    connection.sendall(data)
-    print(data)
+if __name__ == "__main__":
+    main()

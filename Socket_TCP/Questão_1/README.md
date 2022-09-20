@@ -4,18 +4,18 @@ Programação com Sockets TCP - Sistemas Distribuídos
 Para compilar, é necessário abrir dois terminais, um para rodar o servidor e outro para rodar o cliente
 Digite no terminal 1:
 ```
-python3 TCP_servidor.py
+python TCP_servidor.py
 ```
 Digite no terminal 2:
 ```
-python3 TCP_cliente.py
+python TCP_cliente.py
 ```
 ## COMO EXECUTAR
 Para executar o programa é necessário digitar no terminal 2 o seguinte comando:
 ```
 CONNECT Gaby 1234
 ```
-Depois as opções: GETFILES / GETDIRS / PWD / CHDIR / EXIT
+Depois pode ser escolhido as seguintes opções: GETFILES / GETDIRS / PWD / CHDIR / EXIT
 ## BIBLIOTECAS UTILIZADAS
 - socket: Usada para a conexão TCP;
 - hashlib: Usada para criptografar/tratar as mensagens e senha;
@@ -35,4 +35,3 @@ Se a conexão deu certo irá aparecer no terminal da seguinte maneira "Connectio
 GETFILES
 ```
 Após o comando ser enviado, será exibido no terminal todos os arquivos do diretório atual.
-

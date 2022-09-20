@@ -1,51 +1,123 @@
-'''
-# Questão 1 - TCP Cliente 
-# Descrição: Envia mensagens para um servidor com uma das seguintes opções:
-        - CONNECT user, password: Tenta realizar a conexão com servidor
-        - PWD: Exibe caminho atual
-        - CHDIR *path*: Muda o diretório para o *path* especificado 
-        - GETFILES: Exibe todos os arquivos do diretório atual
-        - GETDIRS: Exibe todos os diretórios do diretório atual
-        - EXIT: Finaliza a conexão com o servidor
-# Autores: Gabriela Marangoni Radigonda e Juliano Kendyi Shinohara
-# Data de criação: 11/09/2022
-# Datas de atualizações: 13/09/2022
-                         15/09/2022
+###############################################################################
+# Questão 2 - TCP Cliente                                                     #
+# Descrição:  Faça uma aplicação com um servidor que gerencia um conjunto de  #
+# arquivos remotos entre múltiplos usuários. O servidor deve responder aos    #
+# seguintes comandos:                                                         #
+#              -> ADDFILE (1): adiciona um arquivo novo.                      #
+#              -> DELETE (2): remove um arquivo existente.                    #
+#              -> GETFILESLIST (3): retorna uma lista com o nome dos arquivos #
+#              -> GETFILE (4): faz download de um arquivo.                    #
+# Autores: Gabriela Marangoni Radigonda e Juliano Kendyi Shinohara           #
+# Data de criação: 11/09/2022                                                 #
+# Datas de atualizações: 18/09/2022                                           #
+#                        20/09/2022                                           #
+###############################################################################
 
-'''
-
+import os
 import socket
 
 HOST = "localhost"
 PORT = 6000
 addr = (HOST, PORT)
 
-serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-serverSocket.connect(addr)
-serverSocket.sendall(str.encode('teste teste'))
-data = serverSocket.recv(1024)
-print('Mensagem: ',data.decode())
+clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+clientSocket.connect(addr)
 
-connect = False
-while True:
-    var = input()
-    match var:
-        case 'CONNECT':
-            print('')
 
-        case 'PWD':
-            print('')
+def main():
+    while True:
+        var = input(">  ")
+        varFormated = ''
+        aux = bytearray(3)
+        aux[0] = 1
 
-        case 'CHDIR':
-            print('')
+        if (len(var.split())) > 1:
+            fileName = var.split()[1]
+            varFormated = var.split()[0].upper()
 
-        case 'GETFILES':
-            print('')
+        else:
+            varFormated = var.upper()
 
-        case 'GETDIRS':
-            print('') 
+        match varFormated:
+            case 'ADDFILE':
 
-        case 'EXIT':
-            data = serverSocket.recv(1024)
-            print('Mensagem: ',data.decode())
-            serverSocket.close()
+                aux[1] = 1
+                aux[2] = len(fileName)
+                size = len(fileName)
+                file = os.listdir('./files')
+
+                if (file.__contains__(fileName)):
+                    if (size < 256):
+                        clientSocket.send(aux + bytearray(fileName.encode()))
+                        # tamanho do arquivo transformado em bytes e faz a ordenação usando Big Endian
+                        fileSize = (
+                            os.stat('./files/' + fileName).st_size).to_bytes(4, 'big')
+                        clientSocket.send(fileSize)
+                        OpenFile = open('./files/' + fileName,
+                                        'rb')  # leitura binária
+                        fileBytes = OpenFile.read()  # arquivo se transforma em byte
+                        clientSocket.send(fileBytes)
+
+                        confirmation = int(clientSocket.recv(3)[2])
+                        if (confirmation == 1):
+                            print('File added!')
+
+                        else:
+                            print('ERROR adding a file!')
+
+                else:
+                    print('ERROR: lready exists!')
+
+            case 'DELETE':
+
+                aux[1] = 2
+                aux[2] = len(fileName)
+                clientSocket.send(aux + bytearray(fileName.encode()))
+
+                # confirmação se deu certo ou não o deletar
+                confirmation = int(clientSocket.recv(3)[2])
+                if (confirmation == 1):
+                    print('File deleted!')
+
+                else:
+                    print('ERROR deleting a file!')
+
+            case 'GETFILESLIST':
+
+                aux[1] = 3
+                aux[2] = 0
+                clientSocket.send(aux)
+
+                if (clientSocket.recv(3)[2] == 1):
+                    quantityFiles = int.from_bytes(clientSocket.recv(2), 'big')
+                    print('Files: [', quantityFiles, ']')
+                    for _ in range(quantityFiles):
+                        fileSize = int.from_bytes(clientSocket.recv(1), 'big')
+                        print(clientSocket.recv(fileSize).decode())
+
+                else:
+                    print('ERROR getting file list!')
+
+            case 'GETFILE':
+
+                aux[1] = 4
+                aux[2] = len(fileName)
+                clientSocket.send(aux + bytearray(fileName.encode()))
+
+                if (clientSocket.recv(3)[2] == 1):
+                    sizeFileBig = int.from_bytes(
+                        clientSocket.recv(4), byteorder='big')
+                    file = b''  # define arquivo para binário
+                    file = clientSocket.recv(sizeFileBig)
+
+                    with open('./files/' + fileName, 'w+b') as files:
+                        files.write(file)
+                    print('Get file with SUCCESS!')
+
+                else:
+                    print('ERROR getting file!')
+
+
+if __name__ == "__main__":
+    main()
