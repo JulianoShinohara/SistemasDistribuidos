@@ -29,8 +29,8 @@ def main():
     while True:
         var = input(">  ")
         varFormated = ''
-        aux = bytearray(3)
-        aux[0] = 1
+        header = bytearray(3)
+        header[0] = 1
 
         if (len(var.split())) > 1:
             fileName = var.split()[1]
@@ -42,14 +42,14 @@ def main():
         match varFormated:
             case 'ADDFILE':
 
-                aux[1] = 1
-                aux[2] = len(fileName)
+                header[1] = 1
+                header[2] = len(fileName)
                 size = len(fileName)
                 file = os.listdir('./files')
 
                 if (file.__contains__(fileName)):
                     if (size < 256):
-                        clientSocket.send(aux + bytearray(fileName.encode()))
+                        clientSocket.send(header + bytearray(fileName.encode()))
                         # tamanho do arquivo transformado em bytes e faz a ordenação usando Big Endian
                         fileSize = (
                             os.stat('./files/' + fileName).st_size).to_bytes(4, 'big')
@@ -67,13 +67,13 @@ def main():
                             print('ERROR adding a file!')
 
                 else:
-                    print('ERROR: lready exists!')
+                    print('ERROR: already exists!')
 
             case 'DELETE':
 
-                aux[1] = 2
-                aux[2] = len(fileName)
-                clientSocket.send(aux + bytearray(fileName.encode()))
+                header[1] = 2
+                header[2] = len(fileName)
+                clientSocket.send(header + bytearray(fileName.encode()))
 
                 # confirmação se deu certo ou não o deletar
                 confirmation = int(clientSocket.recv(3)[2])
@@ -85,9 +85,9 @@ def main():
 
             case 'GETFILESLIST':
 
-                aux[1] = 3
-                aux[2] = 0
-                clientSocket.send(aux)
+                header[1] = 3
+                header[2] = 0
+                clientSocket.send(header)
 
                 if (clientSocket.recv(3)[2] == 1):
                     quantityFiles = int.from_bytes(clientSocket.recv(2), 'big')
@@ -101,14 +101,14 @@ def main():
 
             case 'GETFILE':
 
-                aux[1] = 4
-                aux[2] = len(fileName)
-                clientSocket.send(aux + bytearray(fileName.encode()))
+                header[1] = 4
+                header[2] = len(fileName)
+                clientSocket.send(header + bytearray(fileName.encode()))
 
                 if (clientSocket.recv(3)[2] == 1):
                     sizeFileBig = int.from_bytes(
                         clientSocket.recv(4), byteorder='big')
-                    file = b''  # define arquivo para binário
+                    file = b''  # define arquivo para bytes
                     file = clientSocket.recv(sizeFileBig)
 
                     with open('./files/' + fileName, 'w+b') as files:
