@@ -28,8 +28,33 @@ formatLog = '%(asctime)-1s %(userIP)s %(userPort)s %(message)s'
 logging.basicConfig(format=formatLog, level=20)
 nameLog = logging.getLogger('UDPServer')
 
-def receiveArchive():
+def main():
     while True:
         requestClient, addr = serverSocket.recvfrom(1024)
         dados = {'userIP': addr[0], 'userPort': addr[1]}
         fileSize = int.from_bytes(requestClient, addr = serverSocket.recvfrom(1024) [:4], byteorder = 'big')
+        fileName = requestClient[4:].decode()
+        qtyPackets = math.ceil(fileSize/1024)
+        nameLog.info('Protocol: %s', 'Downloading...', extra=dados)
+        file = open('./archiveServer/' + fileName, 'w+b')
+
+        for i in range(qtyPackets):
+            inf, addr = serverSocket.recvfrom(1024)
+            file.write(inf)
+
+        file.seek(0)
+
+        chekcsumServer = hashlib.sha1(file.read()).hexdigest()
+        checksumClient, addr = serverSocket.recvfrom(1024)
+        checksumClient = checksumClient.decode()
+
+        if chekcsumServer == checksumClient:
+            nameLog.info('Protocol: %s', 'Download finished', extra=dados)
+            file.close()
+        else:
+            nameLog.info('Protocol: %s', 'Download error !!', extra=dados)
+            os.remove('./archiveServer/' + fileName)
+            file.close()
+
+if __name__ == "__main__":
+    main()
