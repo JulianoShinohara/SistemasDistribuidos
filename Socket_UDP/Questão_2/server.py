@@ -26,11 +26,10 @@ serverSocket.bind(addr)
 # Define o formato do log
 formatLog = '%(asctime)-1s %(userIP)s %(userPort)s %(message)s'
 logging.basicConfig(format=formatLog, level=20)
-nameLog = logging.getLogger('UDP_Server')
+nameLog = logging.getLogger('UDPServer')
 
 def receiveArchive():
     while True:
         requestClient, addr = serverSocket.recvfrom(1024)
         dados = {'userIP': addr[0], 'userPort': addr[1]}
         fileSize = int.from_bytes(requestClient, addr = serverSocket.recvfrom(1024) [:4], byteorder = 'big')
-        packetsSize = math.ceil(fileSize/1024)
