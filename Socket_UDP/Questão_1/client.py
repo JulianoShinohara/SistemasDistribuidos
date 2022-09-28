@@ -35,8 +35,8 @@ clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 def sendMessage(HOST, PORT):
     addr = HOST, PORT
     
+    print('Type your message here: ')
     while True:
-        print('Type your message here: ')
         message = input('> ')
         
         aux = len(message.encode())
