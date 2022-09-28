@@ -12,7 +12,6 @@
 #                      26/09/2022                                                                                  #    
 ####################################################################################################################
 
-import math
 import socket
 import os
 import logging
@@ -34,31 +33,43 @@ nameLog = logging.getLogger('UDPServer')
 
 def main():
     while True:
+        archive = b''
+
         requestClient, addr = serverSocket.recvfrom(1024)
+        messageClient = requestClient.decode().split(';')
         dados = {'userIP': addr[0], 'userPort': addr[1]}
-        fileSize = int.from_bytes(requestClient[:4], byteorder = 'big')
-        fileName = requestClient[4:].decode()
-        qtyPackets = math.ceil(fileSize/1024)
+
+        checksumClient = messageClient[0]
+        qtyPackets = messageClient[1]
+        fileName = messageClient[2]
+        archiveDirectory = './archiveServer/' + str(fileName)
+        
         nameLog.info('Protocol: %s', 'Downloading...', extra=dados)
-        file = open('./archiveServer/' + fileName, 'w+b')
-
-        for _ in range(qtyPackets):
-            inf, addr = serverSocket.recvfrom(1024)
-            file.write(inf)
-
-        file.seek(0)
-
-        chekcsumServer = hashlib.sha1(file.read()).hexdigest()
-        checksumClient, addr = serverSocket.recvfrom(1024)
-        checksumClient = checksumClient.decode()
+        for _ in range(int(qtyPackets)):
+            requestClient, addr = serverSocket.recvfrom(1024)
+            archive = archive + requestClient
+        
+        chekcsumServer = hashlib.sha1(archive).hexdigest()
+        checksumEqual = bytearray(1)
+        checksumEqual[0] = 2
 
         if chekcsumServer == checksumClient:
-            nameLog.info('Protocol: %s', 'Download finished', extra=dados)
-            file.close()
+
+            with open(archiveDirectory, 'w+b') as archiveServer:
+                archiveServer.write(archive)
+            file = os.listdir(path='./archiveServer')
+            if file.__contains__(fileName):
+                nameLog.info('Protocol: %s', 'Download finished', extra=dados)
+                checksumEqual[0] = 1
+            else:
+                nameLog.info('Protocol: %s', 'Download error !!', extra=dados)
+                os.remove(archiveDirectory)
+                checksumEqual[0] = 2
         else:
             nameLog.info('Protocol: %s', 'Download error !!', extra=dados)
-            os.remove('./archiveServer/' + fileName)
-            file.close()
+            checksumEqual[0] = 2
+        
+        serverSocket.sendto(checksumEqual, addr)
 
 if __name__ == "__main__":
     main()

@@ -11,57 +11,60 @@
 # Data de modificação: 25/09/2022                                                                                  #  
 #                      26/09/2022                                                                                  #    
 ####################################################################################################################
-import socket
-import os
-import math
 import hashlib
+import math
+import os
+import socket
+import threading
 
 HOST = "localhost"
 PORT = 6000
 addr = (HOST, PORT)
 
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)  
-clientSocket.connect(addr)
+
+def sendFile():
+    while True:
+        print('File name to upload: ')
+        fileName = input("> ")        
+        file = os.listdir(path='./archiveClient')
+
+        if file.__contains__(fileName):
+            if len(fileName) < 256:
+                archive = './archiveClient/' + fileName
+                fileSize = os.stat(archive).st_size
+                qtdFile = math.ceil(fileSize / 1024) # faz a divisão por 1024 para saber em quantas partes o arquivo será enviado 
+
+                with open(archive, "rb") as openFile:
+                    checksum = hashlib.sha1(openFile.read()).hexdigest()
+                    archiveSend = checksum + ';' + str(qtdFile) + ';' + fileName
+                
+                    clientSocket.sendto(archiveSend.encode(), addr)
+                with open(archive, "rb") as files:
+                    bytesFile = files.read(1024)
+                    while bytesFile != b'':
+                        clientSocket.sendto(bytesFile,addr)
+                        bytesFile = files.read(1024)
+
+                print('')
+                responseServer, addrServer = clientSocket.recvfrom(1)
+                
+                if responseServer[0] == 1:
+                    print('Download Successfully\n\n')
+                   
+                else:
+                    print('Download Unsuccessfully\n\n')
+                    
+            else:
+                print('File is bigger than 255 bytes\n\n')
+               
+        else:
+            print('Non-existent file\n\n')
+            
 
 def main():
-    while True:
-        print('Nome do arquivo para upload: \n')
-        fileName = input(">  ")        
-        file = os.listdir(path='./archiveClient')
-        aux = len(fileName)
-
-        if(file.__contains__(fileName)):
-            if (aux < 256):
-                fileSize = int.to_bytes((os.stat('./archiveClient/' + fileName).st_size), 4, 'big')
-                qtdFile = math.ceil(aux / 1024) # faz a divisão por 1024 para saber em quantas partes o arquivo será enviado 
-                clientSocket.send(fileSize)
-                openFile = open('./archiveClient/' + fileName,'rb')  # leitura binário
-
-                # faz o checksum (soma de verificação) no arquivo para verifica-lo
-                checksum = openFile.read()
-                sha1_hash = hashlib.sha1(checksum)               
-                checksum = sha1_hash.hexdigest() # hexdigest retorna como um objeto string de comprimento duplo, contendo apenas dígitos hexadecimais
-               # checksum = hashlib.sha1(openFile.read()).hexdigest() # faz o checksum (soma de verificação) no arquivo para verifica-lo
-                
-                # file = fileName + str(fileSize) + checksum + str(qtdFile)
-                # print('file: ', file)
-                # clientSocket.sendto(file.encode(), addr)
-
-                openFile.seek(0) # seek é usado para que abra o arquivo para ler desde o inicio, já que tivemos que dividir o arquivo em pedaços
-                
-                for _ in range(qtdFile):
-                    clientSocket.sendto(openFile.read(1024), addr) #envia para o servidor
-                    print('addr: ', addr)
-
-                print('checksum: ', checksum)
-                clientSocket.sendto(checksum.encode(), addr)
-                openFile.close() 
-
-            else: print('ERROR!')
-        
-        else: print('There is no file here with this name!')
-                
+    sendThread = threading.Thread(target=sendFile)
+    sendThread.start()
                      
 if __name__ == "__main__":
     main()
