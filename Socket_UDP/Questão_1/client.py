@@ -35,8 +35,8 @@ clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 def sendMessage(HOST, PORT):
     addr = HOST, PORT
     
+    print('Type your message here: ')
     while True:
-        print('Type your message here: ')
         message = input('> ')
         
         aux = len(message.encode())
@@ -81,7 +81,7 @@ def receiveMessage(HOST, PORT):
                 print(nickname + ' >> ' + messageReceive)
             
             case 2: #emoji
-                print(nickname + ' >> ' + emoji.emojize(messageReceive))
+                print(nickname + ' >> Emoji: ' + emoji.emojize(messageReceive))
 
             case 3: #URL
                 print(nickname + ' >> Link: ' + messageReceive)
@@ -93,13 +93,7 @@ def receiveMessage(HOST, PORT):
          
 
 def urlMessage(url):
-    regexp = re.compile(
-        r'^(?:http|ftp)s?://' 
-        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'
-        r'localhost|'
-        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' 
-        r'(?::\d+)?'
-        r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+    regexp = re.compile('^(?:http|ftp)s?://(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|localhost|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::\d+)?(?:/?|[/?]\S+)$', re.IGNORECASE)
     return re.match(regexp, url)
 
 def main():
