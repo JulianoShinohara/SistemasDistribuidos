@@ -69,6 +69,7 @@ def receiveMessage(HOST, PORT):
     while True:
         message, addr = clientSocket.recvfrom(1024)
         typeMsg = int(message[0])
+        print(typeMsg)
         nicknameSize = int(message[1])
         nickname = message[2:nicknameSize+2].decode() # apelido do cliente para a variavel nickname
         messageSize = message[nicknameSize+2]
