@@ -50,7 +50,6 @@ def main():
 
             case 'GETFILES':
                 if authenticator == True:
-                    print("Teste get files")
                     clientSocket.send(varFormated.encode('utf-8'))
                     listFiles = []
                     quantityFiles = int(clientSocket.recv(1024).decode('utf-8'))

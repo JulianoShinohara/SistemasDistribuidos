@@ -17,7 +17,7 @@ import os
 import socket
 
 HOST = "localhost"
-PORT = 6000
+PORT = 7000
 addr = (HOST, PORT)
 
 clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

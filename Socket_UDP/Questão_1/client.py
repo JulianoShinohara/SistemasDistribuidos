@@ -45,7 +45,7 @@ def sendMessage(HOST, PORT):
         nicknameSize = len(nickname.encode())
 
         if aux < 256:  #verifica se a mensagem tem até um 255bytes
-            if(emoji_count(emoji.demojize(message)) > 0): # se tem emoji
+            if(emoji_count(emoji.emojize(message)) > 0): # se tem emoji
                 typeMsg = 2
            
             if(urlMessage(message) != None): #se é url
@@ -69,7 +69,6 @@ def receiveMessage(HOST, PORT):
     while True:
         message, addr = clientSocket.recvfrom(1024)
         typeMsg = int(message[0])
-        print(typeMsg)
         nicknameSize = int(message[1])
         nickname = message[2:nicknameSize+2].decode() # apelido do cliente para a variavel nickname
         messageSize = message[nicknameSize+2]

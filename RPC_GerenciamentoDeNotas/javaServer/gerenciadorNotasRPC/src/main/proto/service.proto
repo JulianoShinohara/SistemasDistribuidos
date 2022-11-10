@@ -1,0 +1,117 @@
+// Copyright 2015, Google Inc.
+// All rights reserved.
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_outer_classname = "HelloWorldProto";
+
+// interface de serviço
+service GerenciadorDeNotas {
+  rpc ListarAlunos (ListarAlunosRequest) returns (ListarAlunosResponse) {}
+  rpc AlterarNota (AlterarNotaRequest) returns (AlterarNotaResponse) {}
+  rpc AlterarFaltas (AlterarFaltasRequest) returns (AlterarFaltasResponse) {}
+  rpc ListarDisciplinasCurso (ListarDisciplinasCursoRequest) returns (ListarDisciplinasCursoResponse) {}
+  rpc ListarDisciplinasAluno (ListarDisciplinasAlunoRequest) returns (ListarDisciplinasAlunoResponse) {}
+  rpc InserirMatricula (InserirMatriculaRequest) returns (InserirMatriculaResponse) {}
+}
+
+message ListarAlunosRequest {
+    string codigoDisciplina = 1;
+    int32 ano = 2;
+    int32 semestre = 3;
+}
+
+message ListarAlunosResponse {
+    message Aluno{
+        int32 ra = 1;
+        string nome = 2;
+        int32 periodo = 4;
+    }
+    repeated Aluno alunos = 1;
+    string mensagem = 2;
+}
+
+message AlterarNotaRequest {
+    int32 ra = 1;
+    string codigoDisciplina = 2;
+    int32 ano = 3;
+    int32 semestre = 4;
+    float nota = 5;
+}
+
+message AlterarNotaResponse {
+    int32 ra = 1;
+    string codigoDisciplina = 2;
+    int32 ano = 3;
+    int32 semestre = 4;
+    float nota = 5;
+    string mensagem = 7;
+}
+
+message AlterarFaltasRequest {
+    int32 ra = 1;
+    string codigoDisciplina = 2;
+    int32 ano = 3;
+    int32 semestre = 4;
+    int32 faltas = 5;
+}
+
+message AlterarFaltasResponse {
+    int32 ra = 1;
+    string codigoDisciplina = 2;
+    int32 ano = 3;
+    int32 semestre = 4;
+    int32 faltas = 5;    
+    string mensagem = 6;
+
+}
+
+message ListarDisciplinasAlunoRequest {
+    int32 ra = 1;
+    int32 ano = 2;
+    int32 semestre = 3;
+}
+
+message ListarDisciplinasAlunoResponse {
+    message DisciplinaAlunos{
+        int32 ra = 1;
+        string codigoDisciplina = 2;
+        float nota = 3;
+        int32 faltas = 4;  
+    }
+    repeated DisciplinaAlunos disciplinas = 1;
+    string mensagem = 2;
+}
+
+message InserirMatriculaRequest {
+    Matricula matricula = 1;
+}
+
+message Matricula{
+    int32 ra = 1;
+    string codigoDisciplina = 2;
+    int32 ano = 3;
+    int32 semestre = 4;
+    int32 faltas = 5;
+    float nota = 6;
+}
+
+message InserirMatriculaResponse {
+    Matricula matricula = 1;
+    string mensagem = 2;
+}
+
+message ListarDisciplinasCursoRequest {
+    int32 codigoCurso = 1;
+}
+
+message ListarDisciplinasCursoResponse {
+    message DisciplinaCurso{
+        string codigoDisciplina = 1;
+        string nome = 2;
+        string professor = 3;
+    }
+    repeated DisciplinaCurso disciplinas = 1;
+    string mensagem = 2;
+}

@@ -19,7 +19,7 @@ import socket
 import threading
 
 HOST = ""
-PORT = 6000
+PORT = 7000
 addr = (HOST, PORT)
 
 # Cria socket e define a instancia
