@@ -28,9 +28,9 @@ LISTAR_DISCIPLINAS_ALUNO = "5"
 
 # Enviar os dados da requisição
 def enviaRequest(execucaoID, mensagem, tamMensagem):
-    enviaRequestType(execucaoID)
-    clientsocket.send((str(tamMensagem) + "\n").encode())
-    clientsocket.send(mensagem)
+    enviaRequestType(execucaoID) # Envia o tipo de requisição
+    clientsocket.send((str(tamMensagem) + "\n").encode()) # Envia o tamanho da mensagem
+    clientsocket.send(mensagem) # Envia a mensagem
 
 # Enviar o tipo de requisição
 def enviaRequestType(execucaoID):
@@ -40,7 +40,7 @@ def enviaRequestType(execucaoID):
     # transforma para string
     msg = requestType.SerializeToString()
     tamMensagem = len(msg)
-    clientsocket.send((str(tamMensagem) + "\n").encode())
+    clientsocket.send((str(tamMensagem) + "\n").encode()) # Envia o tamanho da mensagem
     clientsocket.send(msg)
 
 # Recebe os dados da requisição do cliente e envia para o servidor
@@ -64,7 +64,7 @@ def dadosRequisicao(execucaoID):
             # Envia os dados para o servidor
             enviaRequest(execucaoID, request.SerializeToString(), len(request.SerializeToString()))
             tamMensagem = ''
-            while True:
+            while True: 
                 tamMensagem += clientsocket.recv(1).decode()
                 if tamMensagem.endswith('\n'):
                     break

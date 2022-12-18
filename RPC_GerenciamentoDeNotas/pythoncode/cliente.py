@@ -1,5 +1,5 @@
 ###########################################################################################
-# Atividade 3 - RED Client                                                                #
+# Atividade 4 - RPC Client                                                                #
 # Descrição: Implementar um serviço de gerenciamento de notas                             #
 #       - Matricular o aluno em nova disciplina                                           #
 #       - Alterar NOTA do aluno na tabela matricula (RA, cod.Disciplna, ano, semestre)    # 
@@ -7,17 +7,20 @@
 #       - Listar alunos de uma disciplina (cod.Disciplina, ano, semestre)                 #
 #       - Listar disciplinas de um aluno (ra, ano, semestre)                              #
 # Autores: Gabriela Marangoni Radigonda e Juliano Kendyi Shinohara                        #
-# Data de criação: 06/10/2022                                                             #
-# Datas de atualizações:08/10/2022                                                        #
-#                       11/10/2022                                                        #
+# Data de criação: 15/10/2022                                                             #
+# Datas de atualizações:20/10/2022                                                        #
+#                       14/12/2022                                                        #
 #                                                                                         #
 ###########################################################################################
 
-import socket
+import grpc
+
+import gerenciamentoNotas_pb2_grpc
 import gerenciamentoNotas_pb2
-# Cria e conecta um socket TCP
-clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-clientsocket.connect(("localhost", 6000))
+
+channel = grpc.insecure_channel('localhost:6000')
+stub = gerenciamentoNotas_pb2_grpc.GerenciadorDeNotasStub(channel)
+
 
 # Opçoes de execução
 INSERIR_MATRICULA = "1"
@@ -26,29 +29,13 @@ ALTERAR_FALTAS = "3"
 LISTAR_ALUNOS = "4"
 LISTAR_DISCIPLINAS_ALUNO = "5"
 
-# Enviar os dados da requisição
-def enviaRequest(execucaoID, mensagem, tamMensagem):
-    enviaRequestType(execucaoID)
-    clientsocket.send((str(tamMensagem) + "\n").encode())
-    clientsocket.send(mensagem)
-
-# Enviar o tipo de requisição
-def enviaRequestType(execucaoID):
-    requestType = gerenciamentoNotas_pb2.requestType()
-    # Atribui o valor da opção ao tipo de requisição
-    requestType.type = int(execucaoID)
-    # transforma para string
-    msg = requestType.SerializeToString()
-    tamMensagem = len(msg)
-    clientsocket.send((str(tamMensagem) + "\n").encode())
-    clientsocket.send(msg)
 
 # Recebe os dados da requisição do cliente e envia para o servidor
 def dadosRequisicao(execucaoID):
 
     if execucaoID == INSERIR_MATRICULA:
         # Variável com dados da requisição
-        request = gerenciamentoNotas_pb2.inserirMatriculaRequest()
+        request = gerenciamentoNotas_pb2.InserirMatriculaRequest()
         # Recebe os dados da requisição
         print("Inserir novo aluno em uma disciplina: ")
         ra = input("RA do aluno: ")
@@ -61,29 +48,19 @@ def dadosRequisicao(execucaoID):
             request.matricula.codigoDisciplina = codigoDisciplina
             request.matricula.ano = int(ano)
             request.matricula.semestre = int(semestre)
-            # Envia os dados para o servidor
-            enviaRequest(execucaoID, request.SerializeToString(), len(request.SerializeToString()))
-            tamMensagem = ''
-            while True:
-                tamMensagem += clientsocket.recv(1).decode()
-                if tamMensagem.endswith('\n'):
-                    break
-            tamMensagem = int(tamMensagem)
-            # Recebe a mensagem
-            response = clientsocket.recv(tamMensagem)
-            responseParsed = gerenciamentoNotas_pb2.inserirMatriculaResponse()
-            responseParsed.ParseFromString(response)
+            # Envia os dados e recebe a resposta do servidor
+            response = stub.InserirMatricula(request)
             # Requisição com Sucesso
-            if responseParsed.mensagem:
-                print(responseParsed.mensagem)
+            if response.mensagem:
+                print(response.mensagem)
             else:
-                print("\n\n---- Aluno inserido ---- \nRA: " + str(responseParsed.matricula.ra) + "\nCodigo da Disciplina:" + str(responseParsed.matricula.codigoDisciplina) + "\nAno: " + str(responseParsed.matricula.ano) + "\nSemestre: " + str(responseParsed.matricula.semestre), "\n")
+                print("\n\n---- Aluno inserido ---- \nRA: " + str(response.matricula.ra) + "\nCodigo da Disciplina:" + str(response.matricula.codigoDisciplina) + "\nAno: " + str(response.matricula.ano) + "\nSemestre: " + str(response.matricula.semestre), "\n")
         else:
             print("Informações incorretas\n")
 
     elif execucaoID == ALTERAR_NOTA:
         # Variável com dados da requisição
-        request = gerenciamentoNotas_pb2.alterarNotaRequest()
+        request = gerenciamentoNotas_pb2.AlterarNotaRequest()
         # Recebe os dados da requisição
         print("Altera nota de um aluno em determina disciplina: ")
         ra = input("RA do aluno: ")
@@ -98,29 +75,19 @@ def dadosRequisicao(execucaoID):
             request.ano = int(ano)
             request.semestre = int(semestre)
             request.nota = float(nota)
-            # Envia os dados para o servidor
-            enviaRequest(execucaoID, request.SerializeToString(), len(request.SerializeToString()))
-            tamMensagem = ''
-            while True:
-                tamMensagem += clientsocket.recv(1).decode()
-                if tamMensagem.endswith('\n'):
-                    break
-            tamMensagem = int(tamMensagem)
-            # Recebe a mensagem
-            response = clientsocket.recv(tamMensagem)
-            responseParsed = gerenciamentoNotas_pb2.alterarNotaResponse()
-            responseParsed.ParseFromString(response)
+            # Envia os dados e recebe a resposta do servidor
+            response = stub.AlterarNota(request)
             # Requisição com Sucesso
-            if responseParsed.mensagem != "":
-                print(responseParsed.mensagem)
+            if response.mensagem != "":
+                print(response.mensagem)
             else:
-                print("\n\n---- Alteracao realizada com sucesso!! ---- \nRA: " + str(responseParsed.ra) + "\nCodigo da Disciplina:" + str(responseParsed.codigoDisciplina) + "\nAno: " + str(responseParsed.ano) + "\nSemestre: " + str(responseParsed.semestre) + "\nNota: " + str(responseParsed.nota), "\n")
+                print("\n\n---- Alteracao realizada com sucesso!! ---- \nRA: " + str(response.ra) + "\nCodigo da Disciplina:" + str(response.codigoDisciplina) + "\nAno: " + str(response.ano) + "\nSemestre: " + str(response.semestre) + "\nNota: " + str(response.nota), "\n")
         else:
             print("Informações incorretas\n")
 
     elif execucaoID == ALTERAR_FALTAS:
         # Variável com dados da requisição
-        request = gerenciamentoNotas_pb2.alterarFaltasRequest()
+        request = gerenciamentoNotas_pb2.AlterarFaltasRequest()
         # Recebe os dados da requisição
         print("Alterar faltas de um aluno em determinada disciplina: ")
         ra = input("RA do aluno: ")
@@ -135,29 +102,19 @@ def dadosRequisicao(execucaoID):
             request.ano = int(ano)
             request.semestre = int(semestre)
             request.faltas = int(faltas)
-            # Envia os dados para o servidor
-            enviaRequest(execucaoID, request.SerializeToString(), len(request.SerializeToString()))
-            tamMensagem = ''
-            while True:
-                tamMensagem += clientsocket.recv(1).decode()
-                if tamMensagem.endswith('\n'):
-                    break
-            tamMensagem = int(tamMensagem)
-            # Recebe a mensagem
-            response = clientsocket.recv(tamMensagem)
-            responseParsed = gerenciamentoNotas_pb2.alterarFaltasResponse()
-            responseParsed.ParseFromString(response)
+            # Envia os dados e recebe a resposta do servidor
+            response = stub.AlterarFaltas(request)
             # Requisição com Sucesso
-            if responseParsed.mensagem != "":
-                print(responseParsed.mensagem)
+            if response.mensagem != "":
+                print(response.mensagem)
             else:
-                print("\n\n---- Alteracao realizada com sucesso!! ---- \nRA: " + str(responseParsed.ra) + "\nCodigo da Disciplina:" + str(responseParsed.codigoDisciplina) + "\nAno: " + str(responseParsed.ano) + "\nSemestre: " + str(responseParsed.semestre) + "\nFaltas: " + str(responseParsed.faltas), "\n")
+                print("\n\n---- Alteracao realizada com sucesso!! ---- \nRA: " + str(response.ra) + "\nCodigo da Disciplina:" + str(response.codigoDisciplina) + "\nAno: " + str(response.ano) + "\nSemestre: " + str(response.semestre) + "\nFaltas: " + str(response.faltas), "\n")
         else:
             print("Informações incorretas\n")
 
     elif execucaoID == LISTAR_ALUNOS:
         # Variável com dados da requisição
-        request = gerenciamentoNotas_pb2.listarAlunosRequest()
+        request = gerenciamentoNotas_pb2.ListarAlunosRequest()
         # Recebe os dados da requisição
         print("Listas alunos matriculados na disciplina: ")
         codigoDisciplina = input("Codigo da disciplina: ")
@@ -168,24 +125,14 @@ def dadosRequisicao(execucaoID):
             request.codigoDisciplina = codigoDisciplina
             request.ano = int(ano)
             request.semestre = int(semestre)
-            # Envia os dados para o servidor
-            enviaRequest(execucaoID, request.SerializeToString(), len(request.SerializeToString()))
-            tamMensagem = ''
-            while True:
-                tamMensagem += clientsocket.recv(1).decode()
-                if tamMensagem.endswith('\n'):
-                    break
-            tamMensagem = int(tamMensagem)
-            # Recebe a mensagem
-            response = clientsocket.recv(tamMensagem)
-            responseParsed = gerenciamentoNotas_pb2.listarAlunosResponse()
-            responseParsed.ParseFromString(response)
+            # Envia os dados e recebe a resposta do servidor
+            response = stub.ListarAlunos(request)
             # Requisição com Sucesso
-            if responseParsed.mensagem != "":
-                print(responseParsed.mensagem)
+            if response.mensagem != "":
+                print(response.mensagem)
             else:
                 print("\n\n---- Lista de alunos ----")
-                for aluno in responseParsed.alunos:
+                for aluno in response.alunos:
                     print("")
                     print(aluno, end="")
                     print("")
@@ -194,7 +141,7 @@ def dadosRequisicao(execucaoID):
 
     elif execucaoID == LISTAR_DISCIPLINAS_ALUNO:
         # Variável com dados da requisição
-        request = gerenciamentoNotas_pb2.listarDisciplinasAlunoRequest()
+        request = gerenciamentoNotas_pb2.ListarDisciplinasAlunoRequest()
         # Recebe os dados da requisição
         print("Listar as disciplinas matriculadas por aluno: ")
         ra = input("RA do aluno: ")
@@ -205,25 +152,15 @@ def dadosRequisicao(execucaoID):
             request.ra = int(ra)
             request.ano = int(ano)
             request.semestre = int(semestre)
-            # Envia os dados para o servidor
-            enviaRequest(execucaoID, request.SerializeToString(), len(request.SerializeToString()))
-            tamMensagem = ''
-            while True:
-                tamMensagem += clientsocket.recv(1).decode()
-                if tamMensagem.endswith('\n'):
-                    break
-            tamMensagem = int(tamMensagem)
-            # Recebe a mensagem
-            response = clientsocket.recv(tamMensagem)
-            responseParsed = gerenciamentoNotas_pb2.listarDisciplinasAlunoResponse()
-            responseParsed.ParseFromString(response)
+            # Envia os dados e recebe a resposta do servidor
+            response = stub.ListarDisciplinasAluno(request)
             # Requisição com Sucesso
-            if responseParsed.mensagem != "":
-                print(responseParsed.mensagem)
+            if response.mensagem != "":
+                print(response.mensagem)
             else:
                 print("\n\n---- Lista de disciplinas do aluno ----")
-                for i in range(len(responseParsed.disciplinas)):
-                        print("\nRA: " + str(responseParsed.disciplinas[i].ra) + "\nCódigo da Disciplina: " + str(responseParsed.disciplinas[i].codigoDisciplina) + "\nNota: " + str(responseParsed.disciplinas[i].nota) + "\nFaltas: " + str(responseParsed.disciplinas[i].faltas), "\n")
+                for i in range(len(response.disciplinas)):
+                        print("\nRA: " + str(response.disciplinas[i].ra) + "\nCódigo da Disciplina: " + str(response.disciplinas[i].codigoDisciplina) + "\nNota: " + str(response.disciplinas[i].nota) + "\nFaltas: " + str(response.disciplinas[i].faltas), "\n")
         else:
             print("Informações incorretas")
     else:
